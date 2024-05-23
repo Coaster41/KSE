@@ -77,11 +77,10 @@ def preconv7x7(in_planes: int, out_planes: int, stride: int = 2, groups: int = 1
         out_planes,
         kernel_size=7,
         stride=stride,
-        padding=dilation,
+        padding=3,
         groups=groups,
         bias=False,
         dilation=dilation,
-        padding=3,
     )
 
 def kseconv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
