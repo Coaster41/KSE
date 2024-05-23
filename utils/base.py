@@ -140,8 +140,8 @@ def train_3(train_loader, model, criterion, optimizer, epoch, writer):
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-        input = input.cuda(async=True)
-        target = target.cuda(async=True)
+        input = input.to(device)
+        target = target.to(device)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
@@ -191,7 +191,7 @@ def validate_3(val_loader, model, criterion):
     for i, (input, target) in enumerate(val_loader):
         if torch.cuda.is_available():
             input = input.cuda()
-            target = target.cuda(async=True)
+            target = target.to(device)
         input_var = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
 
@@ -238,8 +238,8 @@ def train_4(train_loader, model, criterion, optimizer, epoch, writer):
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-        input = input.cuda(async=True)
-        target = target.cuda(async=True)
+        input = input.to(device)
+        target = target.to(device)
         input.requires_grad_()
 
         # compute output
@@ -288,7 +288,7 @@ def validate_4(val_loader, model, criterion):
         for i, (input, target) in enumerate(val_loader):
             if torch.cuda.is_available():
                 input = input.cuda()
-                target = target.cuda(async=True)
+                target = target.to(device)
 
             input.requires_grad_()
 
