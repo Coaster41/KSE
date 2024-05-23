@@ -81,7 +81,7 @@ def preconv7x7(in_planes: int, out_planes: int, stride: int = 2, groups: int = 1
         groups=groups,
         bias=False,
         dilation=dilation,
-        padding=3
+        padding=3,
     )
 
 def kseconv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
@@ -106,7 +106,7 @@ class BasicBlock(nn.Module):
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         lottery: bool = False,
         kse: bool = False,
-        mask: bool = False
+        mask: bool = False,
     ) -> None:
         super().__init__()
         if norm_layer is None:
@@ -237,7 +237,7 @@ class ResNet(nn.Module):
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         lottery: bool = False,
         kse: bool = False,
-        mask: bool = False
+        mask: bool = False,
     ) -> None:
         super().__init__()
         # _log_api_usage_once(self)
@@ -339,7 +339,7 @@ class ResNet(nn.Module):
                     norm_layer=norm_layer,
                     lottery=self.lottery,
                     mask=self.mask,
-                    kse=self.kse
+                    kse=self.kse,
                 )
             )
 
