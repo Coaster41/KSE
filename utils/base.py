@@ -2,6 +2,10 @@
 
 import torch
 import time
+import numpy as np
+from sklearn.metrics import average_precision_score, f1_score
+
+device = 'cuda:0'
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -34,6 +38,93 @@ def accuracy(output, target, topk=(1,)):
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
+
+def compute_mAP(labels,outputs):
+    AP = []
+    for i in range(labels.shape[0]):
+        AP.append(average_precision_score(labels[i],outputs[i]))
+    return np.mean(AP)
+
+def compute_f1(labels, outputs):
+    outputs = outputs > 0.5
+    return f1_score(labels, outputs, average="samples")
+
+# def train(model, optimizer, train_loader, args, epoch):
+def train_voc(train_loader, model, criterion, optimizer, epoch, writer):
+
+    model.train()
+    losses = AverageMeter()
+    mAP_meter = AverageMeter()
+    f1_meter = AverageMeter()
+    print_freq = len(train_loader.dataset) // 256 // 10
+    #print_freq = 1
+    #import pdb;pdb.set_trace()
+    start_time = time.time()
+    i = 0 
+    for batch, (inputs, targets) in enumerate(train_loader):
+        i+=1
+        inputs, targets = inputs.to(device), targets.to(device)
+        inputs.requires_grad_()
+        optimizer.zero_grad()
+        output = model(inputs)
+        #adjust_learning_rate(optimizer, epoch, batch, print_freq, args)
+        loss = criterion(output, targets)
+        loss.backward()
+        losses.update(loss.item(), inputs.size(0))
+        optimizer.step()
+        #print(pop_config)
+        labels_cpu = targets.cpu().detach().numpy()
+        outputs_cpu = output.cpu().detach().numpy()
+        mAP = compute_mAP(labels_cpu, outputs_cpu)
+        # prec1 = utils.accuracy(output, targets)
+        mAP_meter.update(mAP, inputs.size(0))
+        f1_meter.update(compute_f1(labels_cpu, outputs_cpu), inputs.size(0))
+
+        if batch % print_freq == 0 and batch != 0:
+            current_time = time.time()
+            cost_time = current_time - start_time
+            writer.add_scalar('loss', losses.val, i + epoch * len(train_loader))
+            writer.add_scalar('mAP', float(mAP_meter.avg), i + epoch * len(train_loader))
+            writer.add_scalar('f1', f1_meter.val, i + epoch * len(train_loader))
+            print(
+                'Epoch[{}] ({}/{}):\t'
+                'Loss {:.4f}\t'
+                'mAP {:.2f}%\t'
+                'f1 score {:.2f}\t\t'
+                'Time {:.2f}s'.format(
+                    epoch, batch * 256, len(train_loader.dataset),
+                    float(losses.avg), float(mAP_meter.avg)*100, float(f1_meter.avg), cost_time
+                )
+            )
+            start_time = current_time
+
+def validate_voc(testLoader, model, loss_func):
+    model.eval()
+
+    losses = AverageMeter()
+    mAP = AverageMeter()
+    f1 = AverageMeter()
+
+    start_time = time.time()
+
+    with torch.no_grad():
+        for batch_idx, (inputs, targets) in enumerate(testLoader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+            loss = loss_func(outputs, targets)
+
+            losses.update(loss.item(), inputs.size(0))
+            labels_cpu = targets.cpu().detach().numpy()
+            outputs_cpu = outputs.cpu().detach().numpy()
+            mAP.update(compute_mAP(labels_cpu, outputs_cpu), inputs.size(0))
+            f1.update(compute_f1(labels_cpu, outputs_cpu), inputs.size(0))
+
+        current_time = time.time()
+        print(
+            'Test Loss {:.4f}\tmAP {:.2f}%\tf1 score {:.2f}\tTime {:.2f}s\n'
+            .format(float(losses.avg), float(mAP.avg*100), float(f1.avg), (current_time - start_time))
+        )
+    return float(mAP.avg), float(f1.avg)
 
 def train_3(train_loader, model, criterion, optimizer, epoch, writer):
     batch_time = AverageMeter()
